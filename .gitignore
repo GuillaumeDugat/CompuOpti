@@ -160,3 +160,4 @@ cython_debug/
 #.idea/
 
 # Projects folders
+results
