@@ -77,7 +77,7 @@ def create_random_job(available_skills, horizon, id):
         np.random.exponential(0.5)
     )
 
-    due_date = randint(min(total_working_days, horizon - total_working_days), horizon)
+    due_date = randint(min(total_working_days, horizon), horizon)
 
     skills_required = sample(
         available_skills, min(nb_skills_required, len(available_skills))
@@ -101,4 +101,4 @@ def create_random_job(available_skills, horizon, id):
 
 
 if __name__ == "__main__":
-    create_random_instance(save=True, filepath="instances/random_instance.json")
+    create_random_instance(save=True, filepath="instances/random_instance.json", horizon=5, nb_jobs=5)
