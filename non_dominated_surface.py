@@ -79,6 +79,6 @@ def build_variables_dictionnary(model):
 if __name__ == "__main__":
     instance_filename = "toy_instance.json"
     data = get_instance(instance_filename)
-    model = build_model(data, with_epsilon_contraints=True)
+    model = build_model(data)
     non_dominated_models = compute_non_dominated_surface(model, data)
     print(non_dominated_models)

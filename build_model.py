@@ -6,7 +6,7 @@ import gurobipy as grb
 from gurobipy import GRB
 
 
-def build_model(data, with_epsilon_contraints=False,):
+def build_model(data):
     model = grb.Model()
 
     worker_length = len(data["staff"])  # Number of workers
@@ -63,9 +63,12 @@ def build_model(data, with_epsilon_contraints=False,):
         job_length, vtype=GRB.BINARY, name="is_realized"
     )  # 1 if a job is realized, else 0
 
-    is_worked_job_day = model.addVars(
-        job_length, day_length, vtype=GRB.BINARY, name="is_worked"
-    )  # 1 if a certain day is a work day for a certain job, else 0
+    started_after_job_day = model.addVars(
+        job_length, day_length, vtype=GRB.BINARY, name="started_after"
+    )  # 1 if a job is started after a certain day, else 0
+    finished_before_job_day = model.addVars(
+        job_length, day_length, vtype=GRB.BINARY, name="finished_before"
+    )  # 1 if a job is finished before a certain day, else 0
     max_duration = model.addVar(
         vtype=GRB.INTEGER, name="max_duration"
     )  # Integer that represents the maximum duration for any job
@@ -88,7 +91,8 @@ def build_model(data, with_epsilon_contraints=False,):
         vacations_worker_day,
         works_worker_job_skill_day,
         is_realized_job,
-        is_worked_job_day,
+        started_after_job_day,
+        finished_before_job_day,
         max_duration,
         is_assigned_worker_job,
         max_assigned,
@@ -102,10 +106,9 @@ def build_model(data, with_epsilon_contraints=False,):
         penalties_job,
         due_dates_job,
         is_realized_job,
-        is_worked_job_day,
+        finished_before_job_day,
         max_duration,
         max_assigned,
-        with_epsilon_contraints=with_epsilon_contraints,
     )
 
     return model
@@ -122,7 +125,8 @@ def add_constraints(
     vacations_worker_day,
     works_worker_job_skill_day,
     is_realized_job,
-    is_worked_job_day,
+    started_after_job_day,
+    finished_before_job_day,
     max_duration,
     is_assigned_worker_job,
     max_assigned,
@@ -168,36 +172,74 @@ def add_constraints(
         name="job_coverage",
     )
 
-    # exists_worker_skill works == 1 => is_worked == 1
+    # started_after == 0 => works == 0
     model.addConstrs(
         (
             works_worker_job_skill_day[worker, job, skill, day]
-            <= is_worked_job_day[job, day]
+            <= started_after_job_day[job, day]
             for worker in range(worker_length)
             for job in range(job_length)
             for skill in range(skill_length)
             for day in range(day_length)
         ),
-        name="is_worked_job_day",
+        name="started_after",
     )
-    # forall_worker_skill works == 0 => is_worked == 0
+    # increasing sequence
     model.addConstrs(
         (
-            is_worked_job_day[job, day]
-            <= grb.quicksum(
-                works_worker_job_skill_day[worker, job, skill, day]
-                for worker in range(worker_length)
-                for skill in range(skill_length)
-            )
+            started_after_job_day[job, day] <= started_after_job_day[job, day + 1]
+            for job in range(job_length)
+            for day in range(day_length - 1)
+        ),
+        name="started_after_increasing",
+    )
+    # is_realized_job == 0 => started_after == 1
+    model.addConstrs(
+        (
+            1 - started_after_job_day[job, day] <= is_realized_job[job]
             for job in range(job_length)
             for day in range(day_length)
         ),
-        name="is_worked_job_day_bis",
+        name="started_after_not_realized",
+    )
+
+    # finished before == 1 => works == 0
+    model.addConstrs(
+        (
+            works_worker_job_skill_day[worker, job, skill, day]
+            <= 1 - finished_before_job_day[job, day]
+            for worker in range(worker_length)
+            for job in range(job_length)
+            for skill in range(skill_length)
+            for day in range(day_length)
+        ),
+        name="finished_before",
+    )
+    # increasing sequence
+    model.addConstrs(
+        (
+            finished_before_job_day[job, day] <= finished_before_job_day[job, day + 1]
+            for job in range(job_length)
+            for day in range(day_length - 1)
+        ),
+        name="finished_before_increasing",
+    )
+    # is_realized_job == 0 => finished_before == 1
+    model.addConstrs(
+        (
+            1 - finished_before_job_day[job, day] <= is_realized_job[job]
+            for job in range(job_length)
+            for day in range(day_length)
+        ),
+        name="finished_before_not_realized",
     )
 
     model.addConstrs(
         (
-            grb.quicksum(is_worked_job_day[job, day] for day in range(day_length))
+            grb.quicksum(
+                started_after_job_day[job, day] - finished_before_job_day[job, day]
+                for day in range(day_length)
+            )
             <= max_duration
             for job in range(job_length)
         ),
@@ -253,28 +295,35 @@ def add_objective(
     penalties_job,
     due_dates_job,
     is_realized_job,
-    is_worked_job_day,
+    finished_before_job_day,
     max_duration,
     max_assigned,
-    with_epsilon_contraints=False,
 ):
     # Add primary objective
-    model.setObjective(
+    model.ModelSense = GRB.MAXIMIZE
+    model.setObjectiveN(
         grb.quicksum(
             gains_job[job] * is_realized_job[job]
             - penalties_job[job]
             * grb.quicksum(
-                is_worked_job_day[job, day]
+                1 - finished_before_job_day[job, day]
                 for day in range(due_dates_job[job], day_length)
             )
             for job in range(job_length)
-        )
-        + (
-            0.001 * max_duration + 0.001 * max_assigned
-            if with_epsilon_contraints
-            else 0
         ),
-        sense=GRB.MAXIMIZE,
+        0,
+        priority=2,
+    )
+    # Add multi-objective functions
+    model.setObjectiveN(
+        -max_assigned,
+        1,
+        priority=1,
+    )
+    model.setObjectiveN(
+        -max_duration,
+        2,
+        priority=0,
     )
 
     return model
