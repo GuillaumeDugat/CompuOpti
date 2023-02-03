@@ -95,3 +95,4 @@ if __name__ == "__main__":
     model = build_model(data)
     non_dominated_models = compute_non_dominated_surface(model, data)
     print(non_dominated_models)
+    save_non_dominated_surface(non_dominated_models, "toy_instance.pkl")
