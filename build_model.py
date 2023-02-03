@@ -6,7 +6,7 @@ import gurobipy as grb
 from gurobipy import GRB
 
 
-def build_model(data):
+def build_model(data, with_epsilon_constraint=False):
     model = grb.Model()
 
     worker_length = len(data["staff"])  # Number of workers
@@ -109,6 +109,7 @@ def build_model(data):
         finished_before_job_day,
         max_duration,
         max_assigned,
+        with_epsilon_constraint,
     )
 
     return model
@@ -298,33 +299,50 @@ def add_objective(
     finished_before_job_day,
     max_duration,
     max_assigned,
+    with_epsilon_constraint,
 ):
-    # Add primary objective
-    model.ModelSense = GRB.MAXIMIZE
-    model.setObjectiveN(
+    if not with_epsilon_constraint : 
+        # Add primary objective
+        model.ModelSense = GRB.MAXIMIZE
+        model.setObjectiveN(
+            grb.quicksum(
+                gains_job[job] * is_realized_job[job]
+                - penalties_job[job]
+                * grb.quicksum(
+                    1 - finished_before_job_day[job, day]
+                    for day in range(due_dates_job[job], day_length)
+                )
+                for job in range(job_length)
+            ),
+            0,
+            priority=2,
+        )
+        # Add multi-objective functions
+        model.setObjectiveN(
+            -max_assigned,
+            1,
+            priority=1,
+        )
+        model.setObjectiveN(
+            -max_duration,
+            2,
+            priority=0,
+        )
+    else : 
+        # Add primary objective
+        model.setObjective(
         grb.quicksum(
-            gains_job[job] * is_realized_job[job]
-            - penalties_job[job]
-            * grb.quicksum(
-                1 - finished_before_job_day[job, day]
-                for day in range(due_dates_job[job], day_length)
-            )
-            for job in range(job_length)
-        ),
-        0,
-        priority=2,
+                gains_job[job] * is_realized_job[job]
+                - penalties_job[job]
+                * grb.quicksum(
+                    1 - finished_before_job_day[job, day]
+                    for day in range(due_dates_job[job], day_length)
+                )
+                for job in range(job_length)
+            ) + 0.005 * max_duration + 0.001 * max_assigned,
+        sense=GRB.MAXIMIZE,
     )
-    # Add multi-objective functions
-    model.setObjectiveN(
-        -max_assigned,
-        1,
-        priority=1,
-    )
-    model.setObjectiveN(
-        -max_duration,
-        2,
-        priority=0,
-    )
+
 
     return model
 
