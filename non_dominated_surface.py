@@ -1,4 +1,8 @@
+import os
+import pickle
+
 from gurobipy import GRB
+
 from build_model import build_model, get_instance
 
 
@@ -33,6 +37,7 @@ def compute_non_dominated_surface(
         )
 
         while epsilon_c_max_assigned >= 0:
+            print(epsilon_c_max_assigned)
 
             model.addConstr(
                 (max_assigned <= epsilon_c_max_assigned),
@@ -74,6 +79,14 @@ def build_variables_dictionnary(model):
         variables[v.VarName] = v.X
     variables["objVal"] = model.objVal
     return variables
+
+
+def save_non_dominated_surface(non_dominated_models, filename, folder="results"):
+    pickle.dump(non_dominated_models, open(os.path.join(folder, filename), "wb"))
+
+
+def load_non_dominated_surface(filename, folder="results"):
+    return pickle.load(open(os.path.join(folder, filename), "rb"))
 
 
 if __name__ == "__main__":
