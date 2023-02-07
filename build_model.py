@@ -301,7 +301,7 @@ def add_objective(
     max_assigned,
     with_epsilon_constraint,
 ):
-    if not with_epsilon_constraint : 
+    if not with_epsilon_constraint:
         # Add primary objective
         model.ModelSense = GRB.MAXIMIZE
         model.setObjectiveN(
@@ -328,10 +328,10 @@ def add_objective(
             2,
             priority=0,
         )
-    else : 
+    else:
         # Add primary objective
         model.setObjective(
-        grb.quicksum(
+            grb.quicksum(
                 gains_job[job] * is_realized_job[job]
                 - penalties_job[job]
                 * grb.quicksum(
@@ -339,10 +339,11 @@ def add_objective(
                     for day in range(due_dates_job[job], day_length)
                 )
                 for job in range(job_length)
-            ) + 0.005 * max_duration + 0.001 * max_assigned,
-        sense=GRB.MAXIMIZE,
-    )
-
+            )
+            + 0.005 * max_assigned
+            + 0.001 * max_duration,
+            sense=GRB.MAXIMIZE,
+        )
 
     return model
 
