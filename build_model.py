@@ -340,8 +340,8 @@ def add_objective(
                 )
                 for job in range(job_length)
             )
-            + 0.005 * max_assigned
-            + 0.001 * max_duration,
+            - 0.005 * max_assigned
+            - 0.001 * max_duration,
             sense=GRB.MAXIMIZE,
         )
 

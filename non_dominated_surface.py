@@ -25,8 +25,7 @@ def compute_non_dominated_surface(
 
     epsilon_c_max_duration = horizon
 
-    while epsilon_c_max_duration >= 0:
-        print(epsilon_c_max_duration)
+    while epsilon_c_max_duration > 0:
 
         epsilon_c_max_assigned = total_nb_projects
         next_epsilon_c_max_duration = 0
@@ -36,8 +35,10 @@ def compute_non_dominated_surface(
             name=f"{max_duration_name}_epsilon",
         )
 
-        while epsilon_c_max_assigned >= 0:
-            print(epsilon_c_max_assigned)
+        while epsilon_c_max_assigned > 0:
+            print(
+                f"max_duration <= {epsilon_c_max_duration}, max_assigned <= {epsilon_c_max_assigned}"
+            )
 
             model.addConstr(
                 (max_assigned <= epsilon_c_max_assigned),
@@ -56,6 +57,9 @@ def compute_non_dominated_surface(
                     solutions_variable[max_duration_name], next_epsilon_c_max_duration
                 )
                 epsilon_c_max_assigned = solutions_variable[max_assigned_name] - 1
+                print(
+                    f"Objective: {solutions_variable['objVal']}, max_duration: {solutions_variable[max_duration_name]}, max_assigned: {solutions_variable[max_assigned_name]}\n"
+                )
 
             elif model.Status == GRB.INFEASIBLE:
                 break
@@ -76,7 +80,7 @@ def compute_non_dominated_surface(
 def build_variables_dictionnary(model):
     variables = {}
     for v in model.getVars():
-        variables[v.VarName] = v.X
+        variables[v.VarName] = round(v.X)
     variables["objVal"] = model.objVal
     return variables
 
