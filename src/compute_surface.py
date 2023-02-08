@@ -3,8 +3,6 @@ import pickle
 
 from gurobipy import GRB
 
-from build_model import build_model, get_instance
-
 
 def compute_non_dominated_surface(
     model,
@@ -91,12 +89,3 @@ def save_non_dominated_surface(non_dominated_models, filename, folder="results")
 
 def load_non_dominated_surface(filename, folder="results"):
     return pickle.load(open(os.path.join(folder, filename), "rb"))
-
-
-if __name__ == "__main__":
-    instance_filename = "toy_instance.json"
-    data = get_instance(instance_filename)
-    model = build_model(data)
-    non_dominated_models = compute_non_dominated_surface(model, data)
-    print(non_dominated_models)
-    save_non_dominated_surface(non_dominated_models, "toy_instance.pkl")

@@ -98,7 +98,3 @@ def create_random_job(available_skills, horizon, id):
         "daily_penalty": 3,
         "working_days_per_qualification": working_days_per_qualification,
     }
-
-
-if __name__ == "__main__":
-    create_random_instance(save=True, filepath="instances/random_instance.json", horizon=5, nb_jobs=5)

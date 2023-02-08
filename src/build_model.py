@@ -1,6 +1,3 @@
-import os
-import json
-
 import numpy as np
 import gurobipy as grb
 from gurobipy import GRB
@@ -346,15 +343,3 @@ def add_objective(
         )
 
     return model
-
-
-def get_instance(instance_filename):
-    file = os.path.join("instances", instance_filename)
-    data = json.load(open(file, "r"))
-    return data
-
-
-if __name__ == "__main__":
-    instance_filename = "toy_instance.json"
-    data = get_instance(instance_filename)
-    build_model(data)
