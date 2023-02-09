@@ -89,7 +89,10 @@ def find_task(worker, day, instance, model):
     qualifications = instance["qualifications"]
     for job in range(job_length):
         for skill in range(skill_length):
-            tab = model.getVarByName(f"work[{worker},{job},{skill},{day}]").x
+            if not isinstance(model, dict) :
+                tab = model.getVarByName(f"work[{worker},{job},{skill},{day}]").x
+            else : 
+                tab = model[f"work[{worker},{job},{skill},{day}]"]
             if tab == 1:
                 return job, qualifications[skill]
     return None
