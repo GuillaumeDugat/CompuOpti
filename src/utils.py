@@ -121,3 +121,9 @@ def display_time_table(instance, model):
     res = df.applymap(lambda x: x[1] if x is not None else None)
     res = res.style.apply(lambda x: color_cells(x, df, instance), axis=None)
     return res
+
+
+def display_objectives(model):
+    print(f"Objective : {model.objVal}")
+    print(f"Max assigned : {model.getVarByName('max_assigned').x}")
+    print(f"Max duration : {model.getVarByName('max_duration').x}")
